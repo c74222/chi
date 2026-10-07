@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>股票攤平與平均成本試算器</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #f4f6f9;
+      color: #2c3e50;
+      padding: 16px 12px;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .header h1 {
+      font-size: 1.35rem;
+      color: #1a252f;
+      margin-bottom: 4px;
+    }
+    .header p {
+      font-size: 0.82rem;
+      color: #7f8c8d;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e1e8ed;
+    }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #2c3e50;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .badge {
+      background-color: #e8f4fd;
+      color: #2980b9;
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .input-group {
+      margin-bottom: 10px;
+    }
+    .input-group.full {
+      grid-column: span 2;
+    }
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #34495e;
+      margin-bottom: 4px;
+    }
+    .input-wrapper {
+      position: relative;
+    }
+    input {
+      width: 100%;
+      padding: 9px 10px;
+      border: 1.5px solid #bdc3c7;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #2c3e50;
+      transition: all 0.2s ease;
+      background-color: #f8f9fa;
+    }
+    input:focus {
+      border-color: #3498db;
+      background-color: #ffffff;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+    }
+    .unit {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.8rem;
+      color: #95a5a6;
+      pointer-events: none;
+    }
+    .result-box {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 10px;
+      border-left: 4px solid #3498db;
+    }
+    .result-box.danger {
+      border-left-color: #e74c3c;
+      background: #fdf2f2;
+    }
+    .result-box.success {
+      border-left-color: #2ecc71;
+      background: #f0fdf4;
+    }
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+    .result-row:last-child {
+      margin-bottom: 0;
+    }
+    .result-label {
+      font-size: 0.82rem;
+      color: #566573;
+    }
+    .result-val {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #e74c3c;
+    }
+    .result-sub {
+      font-size: 0.85rem;
+      color: #2c3e50;
+      font-weight: 600;
+    }
+    .table-container {
+      overflow-x: auto;
+      margin-top: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      text-align: right;
+    }
+    th, td {
+      padding: 7px 5px;
+      border-bottom: 1px solid #ecf0f1;
+    }
+    th {
+      background-color: #f2f4f4;
+      color: #34495e;
+      font-weight: 600;
+      text-align: right;
+    }
+    th:first-child, td:first-child {
+      text-align: left;
+    }
+    .footer-note {
+      text-align: center;
+      font-size: 0.72rem;
+      color: #95a5a6;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📈 股票攤平與加碼成本試算器</h1>
+      <p>輕鬆計算加碼後的平均成本與解套目標</p>
+    </div>
+
+    <!-- 1. 目前持股狀況 -->
+    <div class="card">
+      <div class="card-title">
+        <span>📊 1. 目前持股狀況</span>
+        <span class="badge">基本參數</span>
+      </div>
+      <div class="input-grid">
+        <div class="input-group">
+          <label for="oldShares">現有持股</label>
+          <div class="input-wrapper">
+            <input type="number" id="oldShares" value="3" min="0" step="1" oninput="calculate()">
+            <span class="unit">張</span>
+          </div>
+        </div>
+        <div class="input-group">
+          <label for="oldPrice">成交均價</label>
+          <div class="input-wrapper">
+            <input type="number" id="oldPrice" value="67.7" min="0" step="0.1" oninput="calculate()">
+            <span class="unit">元</span>
+          </div>
+        </div>
+        <div class="input-group full">
+          <label for="currentPrice">當前市價 / 擬加碼價</label>
+          <div class="input-wrapper">
+            <input type="number" id="currentPrice" value="46.0" min="0" step="0.1" oninput="calculate()">
+            <span class="unit">元</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="result-box danger" id="currentStatusBox">
+        <div class="result-row">
+          <span class="result-label">目前投入總資金：</span>
+          <span class="result-sub" id="currentInvestment">NT$ 203,100</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">目前帳面未實現損益：</span>
+          <span class="result-val" id="currentUnrealized">-NT$ 65,100 (-32.05%)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 試算加碼 N 張 -->
+    <div class="card">
+      <div class="card-title">
+        <span>🧮 2. 試算：預計加碼 N 張後的新均價</span>
+      </div>
+      <div class="input-group">
+        <label for="addShares">預計加碼張數</label>
+        <div class="input-wrapper">
+          <input type="number" id="addShares" value="3" min="0" step="1" oninput="calculate()">
+          <span class="unit">張</span>
+        </div>
+      </div>
+      <div class="result-box">
+        <div class="result-row">
+          <span class="result-label">加碼後總持股：</span>
+          <span class="result-sub" id="resTotalShares">6 張</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">新平均成本：</span>
+          <span class="result-val" id="resNewCost">56.85 元</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">需額外投入資金：</span>
+          <span class="result-sub" id="resAddFund">NT$ 138,000</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">解套所需漲幅：</span>
+          <span class="result-sub" id="resRequiredGain">+23.59%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. 反推目標價加碼張數 -->
+    <div class="card">
+      <div class="card-title">
+        <span>🎯 3. 反推：想降到目標均價，需買幾張？</span>
+      </div>
+      <div class="input-group">
+        <label for="targetPrice">目標平均成本</label>
+        <div class="input-wrapper">
+          <input type="number" id="targetPrice" value="50.0" min="0" step="0.1" oninput="calculate()">
+          <span class="unit">元</span>
+        </div>
+      </div>
+      <div class="result-box success">
+        <div class="result-row">
+          <span class="result-label">精確需加碼：</span>
+          <span class="result-val" id="resNeededExact">13.28 張</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">建議買進張數：</span>
+          <span class="result-sub" id="resNeededRounded">14 張 (14,000 股)</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">預估需額外資金：</span>
+          <span class="result-sub" id="resTargetFund">NT$ 610,800</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. 快速對照表 -->
+    <div class="card">
+      <div class="card-title">
+        <span>📋 4. 階梯加碼試算對照表</span>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>加碼張數</th>
+              <th>需投入資金</th>
+              <th>總持股</th>
+              <th>新均價</th>
+              <th>解套需漲幅</th>
+            </tr>
+          </thead>
+          <tbody id="matrixTable">
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="footer-note">
+      * 註：試算結果未含券商手續費 (0.1425%) 與證交稅 (0.3%)，實際金額以券商交割單為準。
+    </div>
+  </div>
+
+  <script>
+    function calculate() {
+      const oldShares = parseFloat(document.getElementById('oldShares').value) || 0;
+      const oldPrice = parseFloat(document.getElementById('oldPrice').value) || 0;
+      const currentPrice = parseFloat(document.getElementById('currentPrice').value) || 0;
+
+      // 1. 現況計算
+      const oldTotalCost = oldShares * oldPrice * 1000;
+      const oldMarketVal = oldShares * currentPrice * 1000;
+      const oldLoss = oldMarketVal - oldTotalCost;
+      const oldLossPct = oldTotalCost > 0 ? (oldLoss / oldTotalCost) * 100 : 0;
+
+      document.getElementById('currentInvestment').innerText = `NT$ ${Math.round(oldTotalCost).toLocaleString()}`;
+      const lossElem = document.getElementById('currentUnrealized');
+      lossElem.innerText = `${oldLoss >= 0 ? '+' : ''}NT$ ${Math.round(oldLoss).toLocaleString()} (${oldLossPct.toFixed(2)}%)`;
+      lossElem.style.color = oldLoss >= 0 ? '#e74c3c' : '#27ae60';
+
+      // 2. 加碼 N 張試算
+      const addShares = parseFloat(document.getElementById('addShares').value) || 0;
+      const totalShares = oldShares + addShares;
+      if (totalShares > 0) {
+        const addFund = addShares * currentPrice * 1000;
+        const newAvgCost = (oldShares * oldPrice + addShares * currentPrice) / totalShares;
+        const reqGain = currentPrice > 0 ? ((newAvgCost - currentPrice) / currentPrice) * 100 : 0;
+
+        document.getElementById('resTotalShares').innerText = `${totalShares} 張`;
+        document.getElementById('resNewCost').innerText = `${newAvgCost.toFixed(2)} 元`;
+        document.getElementById('resAddFund').innerText = `NT$ ${Math.round(addFund).toLocaleString()}`;
+        document.getElementById('resRequiredGain').innerText = `+${reqGain.toFixed(2)}%`;
+      } else {
+        document.getElementById('resTotalShares').innerText = `-- 張`;
+        document.getElementById('resNewCost').innerText = `-- 元`;
+        document.getElementById('resAddFund').innerText = `NT$ --`;
+        document.getElementById('resRequiredGain').innerText = `--%`;
+      }
+
+      // 3. 反推目標價試算
+      const targetPrice = parseFloat(document.getElementById('targetPrice').value) || 0;
+      if (targetPrice > currentPrice && oldShares > 0 && oldPrice > targetPrice) {
+        const neededSharesExact = oldShares * (oldPrice - targetPrice) / (targetPrice - currentPrice);
+        const neededSharesRound = Math.ceil(neededSharesExact);
+        const neededFund = neededSharesExact * currentPrice * 1000;
+
+        document.getElementById('resNeededExact').innerText = `${neededSharesExact.toFixed(2)} 張`;
+        document.getElementById('resNeededRounded').innerText = `${neededSharesRound} 張 (${(neededSharesRound * 1000).toLocaleString()} 股)`;
+        document.getElementById('resTargetFund').innerText = `NT$ ${Math.round(neededFund).toLocaleString()}`;
+      } else if (targetPrice <= currentPrice && targetPrice > 0) {
+        document.getElementById('resNeededExact').innerText = '目標價需高於現價';
+        document.getElementById('resNeededRounded').innerText = '現價無法將成本降至現價以下';
+        document.getElementById('resTargetFund').innerText = 'NT$ --';
+      } else if (targetPrice >= oldPrice && targetPrice > 0) {
+        document.getElementById('resNeededExact').innerText = '0 張';
+        document.getElementById('resNeededRounded').innerText = '已達到或高於目標價';
+        document.getElementById('resTargetFund').innerText = 'NT$ 0';
+      } else {
+        document.getElementById('resNeededExact').innerText = '-- 張';
+        document.getElementById('resNeededRounded').innerText = '-- 張';
+        document.getElementById('resTargetFund').innerText = 'NT$ --';
+      }
+
+      // 4. 對照表動態渲染
+      const matrixTable = document.getElementById('matrixTable');
+      matrixTable.innerHTML = '';
+      const sampleAdditions = [1, 2, 3, 5, 7, 10, 15, 20];
+
+      sampleAdditions.forEach(num => {
+        const tShares = oldShares + num;
+        const addAmt = num * currentPrice * 1000;
+        const avg = (oldShares * oldPrice + num * currentPrice) / tShares;
+        const gain = currentPrice > 0 ? ((avg - currentPrice) / currentPrice) * 100 : 0;
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td style="text-align:left; font-weight:600;">+${num} 張</td>
+          <td>NT$ ${Math.round(addAmt).toLocaleString()}</td>
+          <td>${tShares} 張</td>
+          <td style="font-weight:700; color:#e74c3c;">${avg.toFixed(2)} 元</td>
+          <td style="color:#2980b9;">+${gain.toFixed(1)}%</td>
+        `;
+        matrixTable.appendChild(row);
+      });
+    }
+
+    calculate();
+  </script>
+</body>
+</html>

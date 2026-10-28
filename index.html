@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>股票攤平與平均成本試算器</title>
+  <title>股票攤平、買賣與精確成本試算器</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -14,7 +14,7 @@
       line-height: 1.5;
     }
     .container {
-      max-width: 500px;
+      max-width: 520px;
       margin: 0 auto;
     }
     .header {
@@ -76,7 +76,7 @@
     .input-wrapper {
       position: relative;
     }
-    input {
+    input, select {
       width: 100%;
       padding: 9px 10px;
       border: 1.5px solid #bdc3c7;
@@ -87,7 +87,7 @@
       transition: all 0.2s ease;
       background-color: #f8f9fa;
     }
-    input:focus {
+    input:focus, select:focus {
       border-color: #3498db;
       background-color: #ffffff;
       outline: none;
@@ -174,35 +174,42 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>📈 股票攤平與加碼成本試算器</h1>
-      <p>輕鬆計算加碼後的平均成本與解套目標</p>
+      <h1>📈 股票買賣與加碼攤平試算器</h1>
+      <p>支援買入成本、賣出試算、交易稅與手續費折數計算</p>
     </div>
 
-    <!-- 1. 目前持股狀況 -->
+    <!-- 1. 目前持股與手續費設定 -->
     <div class="card">
       <div class="card-title">
-        <span>📊 1. 目前持股狀況</span>
+        <span>📊 1. 目前持股狀況與手續費設定</span>
         <span class="badge">基本參數</span>
       </div>
       <div class="input-grid">
         <div class="input-group">
           <label for="oldShares">現有持股</label>
           <div class="input-wrapper">
-            <input type="number" id="oldShares" value="3" min="0" step="1" oninput="calculate()">
+            <input type="number" id="oldShares" value="20" min="0" step="1" oninput="calculate()">
             <span class="unit">張</span>
           </div>
         </div>
         <div class="input-group">
           <label for="oldPrice">成交均價</label>
           <div class="input-wrapper">
-            <input type="number" id="oldPrice" value="67.7" min="0" step="0.1" oninput="calculate()">
+            <input type="number" id="oldPrice" value="31.48" min="0" step="0.01" oninput="calculate()">
             <span class="unit">元</span>
           </div>
         </div>
-        <div class="input-group full">
+        <div class="input-group">
+          <label for="feeDiscount">手續費折扣</label>
+          <div class="input-wrapper">
+            <input type="number" id="feeDiscount" value="2.8" min="0" max="10" step="0.1" oninput="calculate()">
+            <span class="unit">折</span>
+          </div>
+        </div>
+        <div class="input-group">
           <label for="currentPrice">當前市價 / 擬加碼價</label>
           <div class="input-wrapper">
-            <input type="number" id="currentPrice" value="46.0" min="0" step="0.1" oninput="calculate()">
+            <input type="number" id="currentPrice" value="31.48" min="0" step="0.01" oninput="calculate()">
             <span class="unit">元</span>
           </div>
         </div>
@@ -210,90 +217,156 @@
       
       <div class="result-box danger" id="currentStatusBox">
         <div class="result-row">
-          <span class="result-label">目前投入總資金：</span>
-          <span class="result-sub" id="currentInvestment">NT$ 203,100</span>
+          <span class="result-label">買入成交總價：</span>
+          <span class="result-sub" id="rawCost">NT$ 629,600</span>
         </div>
         <div class="result-row">
-          <span class="result-label">目前帳面未實現損益：</span>
-          <span class="result-val" id="currentUnrealized">-NT$ 65,100 (-32.05%)</span>
+          <span class="result-label">估算買入手續費：</span>
+          <span class="result-sub" id="feeAmount">NT$ 251 (約 0.040%)</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">實際交割扣款額：</span>
+          <span class="result-sub" id="currentInvestment">NT$ 629,851</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">含手續費精確每股成本：</span>
+          <span class="result-val" id="exactCostPerShare" style="color: #2c3e50;">31.492 元</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">帳面未實現損益：</span>
+          <span class="result-val" id="currentUnrealized">-NT$ 251 (-0.04%)</span>
         </div>
       </div>
     </div>
 
-    <!-- 2. 試算加碼 N 張 -->
+    <!-- 2. 賣出持股試算 -->
     <div class="card">
       <div class="card-title">
-        <span>🧮 2. 試算：預計加碼 N 張後的新均價</span>
+        <span>💰 2. 賣出持股試算</span>
+        <span class="badge" style="background-color: #fff0f0; color: #e74c3c;">獲利/交割計算</span>
+      </div>
+      <div class="input-grid">
+        <div class="input-group">
+          <label for="sellShares">預計賣出持股</label>
+          <div class="input-wrapper">
+            <input type="number" id="sellShares" value="20" min="0" step="1" oninput="calculate()">
+            <span class="unit">張</span>
+          </div>
+        </div>
+        <div class="input-group">
+          <label for="sellPrice">賣出成交價</label>
+          <div class="input-wrapper">
+            <input type="number" id="sellPrice" value="32.19" min="0" step="0.01" oninput="calculate()">
+            <span class="unit">元</span>
+          </div>
+        </div>
+        <div class="input-group full">
+          <label for="assetType">交易標的類型 (影響交易稅)</label>
+          <select id="assetType" onchange="calculate()">
+            <option value="etf" selected>ETF / 存託憑證 (交易稅 0.1%)</option>
+            <option value="stock">一般個股 (交易稅 0.3%)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="result-box success">
+        <div class="result-row">
+          <span class="result-label">賣出成交總金額：</span>
+          <span class="result-sub" id="sellRawTotal">NT$ 643,800</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">賣出手續費 (2.8折)：</span>
+          <span class="result-sub" id="sellFee">NT$ 256</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">證券交易稅：</span>
+          <span class="result-sub" id="sellTax">NT$ 643</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">賣出實際入帳金額 (實拿)：</span>
+          <span class="result-sub" id="sellNetIncome" style="color: #27ae60;">NT$ 642,901</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">本次賣出淨利潤 (獲利/虧損)：</span>
+          <span class="result-val" id="sellRealizedProfit" style="color: #e74c3c;">+NT$ 13,050 (+2.07%)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. 試算加碼 N 張 -->
+    <div class="card">
+      <div class="card-title">
+        <span>🧮 3. 試算：預計加碼 N 張後的新均價</span>
       </div>
       <div class="input-group">
         <label for="addShares">預計加碼張數</label>
         <div class="input-wrapper">
-          <input type="number" id="addShares" value="3" min="0" step="1" oninput="calculate()">
+          <input type="number" id="addShares" value="10" min="0" step="1" oninput="calculate()">
           <span class="unit">張</span>
         </div>
       </div>
       <div class="result-box">
         <div class="result-row">
           <span class="result-label">加碼後總持股：</span>
-          <span class="result-sub" id="resTotalShares">6 張</span>
+          <span class="result-sub" id="resTotalShares">30 張</span>
         </div>
         <div class="result-row">
-          <span class="result-label">新平均成本：</span>
-          <span class="result-val" id="resNewCost">56.85 元</span>
+          <span class="result-label">新成交均價 (不含費)：</span>
+          <span class="result-sub" id="resNewCostRaw">31.48 元</span>
         </div>
         <div class="result-row">
-          <span class="result-label">需額外投入資金：</span>
-          <span class="result-sub" id="resAddFund">NT$ 138,000</span>
+          <span class="result-label">加碼需額外交割資金：</span>
+          <span class="result-sub" id="resAddFund">NT$ 314,926</span>
         </div>
         <div class="result-row">
-          <span class="result-label">解套所需漲幅：</span>
-          <span class="result-sub" id="resRequiredGain">+23.59%</span>
+          <span class="result-label">新精確每股成本 (含費)：</span>
+          <span class="result-val" id="resNewCostExact">31.492 元</span>
         </div>
       </div>
     </div>
 
-    <!-- 3. 反推目標價加碼張數 -->
+    <!-- 4. 反推目標價加碼張數 -->
     <div class="card">
       <div class="card-title">
-        <span>🎯 3. 反推：想降到目標均價，需買幾張？</span>
+        <span>🎯 4. 反推：想降到目標均價，需買幾張？</span>
       </div>
       <div class="input-group">
-        <label for="targetPrice">目標平均成本</label>
+        <label for="targetPrice">目標平均成本 (成交均價)</label>
         <div class="input-wrapper">
-          <input type="number" id="targetPrice" value="50.0" min="0" step="0.1" oninput="calculate()">
+          <input type="number" id="targetPrice" value="30.0" min="0" step="0.1" oninput="calculate()">
           <span class="unit">元</span>
         </div>
       </div>
       <div class="result-box success">
         <div class="result-row">
           <span class="result-label">精確需加碼：</span>
-          <span class="result-val" id="resNeededExact">13.28 張</span>
+          <span class="result-val" id="resNeededExact">-- 張</span>
         </div>
         <div class="result-row">
           <span class="result-label">建議買進張數：</span>
-          <span class="result-sub" id="resNeededRounded">14 張 (14,000 股)</span>
+          <span class="result-sub" id="resNeededRounded">-- 張</span>
         </div>
         <div class="result-row">
-          <span class="result-label">預估需額外資金：</span>
-          <span class="result-sub" id="resTargetFund">NT$ 610,800</span>
+          <span class="result-label">預估需額外交割資金：</span>
+          <span class="result-sub" id="resTargetFund">NT$ --</span>
         </div>
       </div>
     </div>
 
-    <!-- 4. 快速對照表 -->
+    <!-- 5. 快速對照表 -->
     <div class="card">
       <div class="card-title">
-        <span>📋 4. 階梯加碼試算對照表</span>
+        <span>📋 5. 階梯加碼試算對照表 (含手續費)</span>
       </div>
       <div class="table-container">
         <table>
           <thead>
             <tr>
               <th>加碼張數</th>
-              <th>需投入資金</th>
+              <th>需投入總交割額</th>
               <th>總持股</th>
-              <th>新均價</th>
-              <th>解套需漲幅</th>
+              <th>新均價(未含費)</th>
+              <th>精確成本(含費)</th>
             </tr>
           </thead>
           <tbody id="matrixTable">
@@ -303,52 +376,106 @@
     </div>
 
     <div class="footer-note">
-      * 註：試算結果未含券商手續費 (0.1425%) 與證交稅 (0.3%)，實際金額以券商交割單為準。
+      * 註：手續費計算包含公定 0.1425% 乘以折扣（最低預設 20 元），交易稅依類型計算（ETF 無條件捨去、股票四捨五入）。
     </div>
   </div>
 
   <script>
+    function getBrokerFee(tradeAmount, discountVal) {
+      if (tradeAmount <= 0) return 0;
+      const baseFee = tradeAmount * 0.001425;
+      const discountedFee = Math.floor(baseFee * (discountVal / 10));
+      return Math.max(20, discountedFee); // 最低收取 20 元
+    }
+
     function calculate() {
       const oldShares = parseFloat(document.getElementById('oldShares').value) || 0;
       const oldPrice = parseFloat(document.getElementById('oldPrice').value) || 0;
       const currentPrice = parseFloat(document.getElementById('currentPrice').value) || 0;
+      const feeDiscount = parseFloat(document.getElementById('feeDiscount').value) || 10;
 
-      // 1. 現況計算
-      const oldTotalCost = oldShares * oldPrice * 1000;
-      const oldMarketVal = oldShares * currentPrice * 1000;
-      const oldLoss = oldMarketVal - oldTotalCost;
-      const oldLossPct = oldTotalCost > 0 ? (oldLoss / oldTotalCost) * 100 : 0;
+      // 1. 買入現況計算
+      const rawCostAmt = oldShares * oldPrice * 1000;
+      const oldFee = getBrokerFee(rawCostAmt, feeDiscount);
+      const totalOldSettlement = rawCostAmt + oldFee;
+      const oldExactCostPerShare = oldShares > 0 ? (totalOldSettlement / (oldShares * 1000)) : 0;
+      
+      const currentMarketVal = oldShares * currentPrice * 1000;
+      const oldUnrealized = currentMarketVal - totalOldSettlement;
+      const oldLossPct = totalOldSettlement > 0 ? (oldUnrealized / totalOldSettlement) * 100 : 0;
 
-      document.getElementById('currentInvestment').innerText = `NT$ ${Math.round(oldTotalCost).toLocaleString()}`;
+      document.getElementById('rawCost').innerText = `NT$ ${Math.round(rawCostAmt).toLocaleString()}`;
+      document.getElementById('feeAmount').innerText = `NT$ ${oldFee.toLocaleString()} (约 ${(0.001425 * feeDiscount * 10).toFixed(3)}%)`;
+      document.getElementById('currentInvestment').innerText = `NT$ ${Math.round(totalOldSettlement).toLocaleString()}`;
+      document.getElementById('exactCostPerShare').innerText = `${oldExactCostPerShare.toFixed(3)} 元`;
+      
       const lossElem = document.getElementById('currentUnrealized');
-      lossElem.innerText = `${oldLoss >= 0 ? '+' : ''}NT$ ${Math.round(oldLoss).toLocaleString()} (${oldLossPct.toFixed(2)}%)`;
-      lossElem.style.color = oldLoss >= 0 ? '#e74c3c' : '#27ae60';
+      lossElem.innerText = `${oldUnrealized >= 0 ? '+' : ''}NT$ ${Math.round(oldUnrealized).toLocaleString()} (${oldLossPct.toFixed(2)}%)`;
+      lossElem.style.color = oldUnrealized >= 0 ? '#e74c3c' : '#27ae60';
 
-      // 2. 加碼 N 張試算
+      // 2. 賣出試算計算
+      const sellShares = parseFloat(document.getElementById('sellShares').value) || 0;
+      const sellPrice = parseFloat(document.getElementById('sellPrice').value) || 0;
+      const assetType = document.getElementById('assetType').value;
+      
+      const sellRawTotal = sellShares * sellPrice * 1000;
+      const sellFee = getBrokerFee(sellRawTotal, feeDiscount);
+      
+      // 修正：ETF 交易稅採用無條件捨去 (Math.floor)，一般股票四捨五入 (Math.round)
+      let sellTax = 0;
+      if (assetType === 'etf') {
+        sellTax = Math.floor(sellRawTotal * 0.001);
+      } else {
+        sellTax = Math.round(sellRawTotal * 0.003);
+      }
+
+      const sellNetIncome = sellRawTotal - sellFee - sellTax;
+
+      // 計算本次賣出對應的買入成本與淨利潤
+      const costForSoldShares = oldExactCostPerShare * sellShares * 1000;
+      const realizedProfit = sellShares > 0 ? (sellNetIncome - costForSoldShares) : 0;
+      const profitPct = costForSoldShares > 0 ? (realizedProfit / costForSoldShares) * 100 : 0;
+
+      document.getElementById('sellRawTotal').innerText = `NT$ ${Math.round(sellRawTotal).toLocaleString()}`;
+      document.getElementById('sellFee').innerText = `NT$ ${sellFee.toLocaleString()}`;
+      document.getElementById('sellTax').innerText = `NT$ ${sellTax.toLocaleString()}`;
+      document.getElementById('sellNetIncome').innerText = `NT$ ${Math.round(sellNetIncome).toLocaleString()}`;
+
+      const profitElem = document.getElementById('sellRealizedProfit');
+      profitElem.innerText = `${realizedProfit >= 0 ? '+' : ''}NT$ ${Math.round(realizedProfit).toLocaleString()} (${profitPct.toFixed(2)}%)`;
+      profitElem.style.color = realizedProfit >= 0 ? '#e74c3c' : '#27ae60';
+
+      // 3. 加碼 N 張試算
       const addShares = parseFloat(document.getElementById('addShares').value) || 0;
       const totalShares = oldShares + addShares;
       if (totalShares > 0) {
-        const addFund = addShares * currentPrice * 1000;
-        const newAvgCost = (oldShares * oldPrice + addShares * currentPrice) / totalShares;
-        const reqGain = currentPrice > 0 ? ((newAvgCost - currentPrice) / currentPrice) * 100 : 0;
+        const addRawAmt = addShares * currentPrice * 1000;
+        const addFee = getBrokerFee(addRawAmt, feeDiscount);
+        const addSettlement = addRawAmt + addFee;
+
+        const newAvgRawCost = (oldShares * oldPrice + addShares * currentPrice) / totalShares;
+        const totalSettlementAll = totalOldSettlement + addSettlement;
+        const newExactCost = totalSettlementAll / (totalShares * 1000);
 
         document.getElementById('resTotalShares').innerText = `${totalShares} 張`;
-        document.getElementById('resNewCost').innerText = `${newAvgCost.toFixed(2)} 元`;
-        document.getElementById('resAddFund').innerText = `NT$ ${Math.round(addFund).toLocaleString()}`;
-        document.getElementById('resRequiredGain').innerText = `+${reqGain.toFixed(2)}%`;
+        document.getElementById('resNewCostRaw').innerText = `${newAvgRawCost.toFixed(2)} 元`;
+        document.getElementById('resAddFund').innerText = `NT$ ${Math.round(addSettlement).toLocaleString()}`;
+        document.getElementById('resNewCostExact').innerText = `${newExactCost.toFixed(3)} 元`;
       } else {
         document.getElementById('resTotalShares').innerText = `-- 張`;
-        document.getElementById('resNewCost').innerText = `-- 元`;
+        document.getElementById('resNewCostRaw').innerText = `-- 元`;
         document.getElementById('resAddFund').innerText = `NT$ --`;
-        document.getElementById('resRequiredGain').innerText = `--%`;
+        document.getElementById('resNewCostExact').innerText = `-- 元`;
       }
 
-      // 3. 反推目標價試算
+      // 4. 反推目標價試算
       const targetPrice = parseFloat(document.getElementById('targetPrice').value) || 0;
       if (targetPrice > currentPrice && oldShares > 0 && oldPrice > targetPrice) {
         const neededSharesExact = oldShares * (oldPrice - targetPrice) / (targetPrice - currentPrice);
         const neededSharesRound = Math.ceil(neededSharesExact);
-        const neededFund = neededSharesExact * currentPrice * 1000;
+        const addRawAmtNeeded = neededSharesExact * currentPrice * 1000;
+        const addFeeNeeded = getBrokerFee(addRawAmtNeeded, feeDiscount);
+        const neededFund = addRawAmtNeeded + addFeeNeeded;
 
         document.getElementById('resNeededExact').innerText = `${neededSharesExact.toFixed(2)} 張`;
         document.getElementById('resNeededRounded').innerText = `${neededSharesRound} 張 (${(neededSharesRound * 1000).toLocaleString()} 股)`;
@@ -367,24 +494,27 @@
         document.getElementById('resTargetFund').innerText = 'NT$ --';
       }
 
-      // 4. 對照表動態渲染
+      // 5. 對照表動態渲染
       const matrixTable = document.getElementById('matrixTable');
       matrixTable.innerHTML = '';
-      const sampleAdditions = [1, 2, 3, 5, 7, 10, 15, 20];
+      const sampleAdditions = [1, 2, 5, 10, 15, 20, 30, 50];
 
       sampleAdditions.forEach(num => {
         const tShares = oldShares + num;
-        const addAmt = num * currentPrice * 1000;
-        const avg = (oldShares * oldPrice + num * currentPrice) / tShares;
-        const gain = currentPrice > 0 ? ((avg - currentPrice) / currentPrice) * 100 : 0;
+        const addRaw = num * currentPrice * 1000;
+        const addFee = getBrokerFee(addRaw, feeDiscount);
+        const addTotalSet = addRaw + addFee;
+
+        const avgRaw = (oldShares * oldPrice + num * currentPrice) / tShares;
+        const exactAvg = (totalOldSettlement + addTotalSet) / (tShares * 1000);
 
         const row = document.createElement('tr');
         row.innerHTML = `
           <td style="text-align:left; font-weight:600;">+${num} 張</td>
-          <td>NT$ ${Math.round(addAmt).toLocaleString()}</td>
+          <td>NT$ ${Math.round(addTotalSet).toLocaleString()}</td>
           <td>${tShares} 張</td>
-          <td style="font-weight:700; color:#e74c3c;">${avg.toFixed(2)} 元</td>
-          <td style="color:#2980b9;">+${gain.toFixed(1)}%</td>
+          <td style="font-style:italic;">${avgRaw.toFixed(2)} 元</td>
+          <td style="font-weight:700; color:#e74c3c;">${exactAvg.toFixed(3)} 元</td>
         `;
         matrixTable.appendChild(row);
       });
